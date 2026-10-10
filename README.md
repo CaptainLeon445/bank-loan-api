@@ -48,9 +48,9 @@ Non-secret settings live in `BankApp.WebApi/appsettings*.json`. Secrets are neve
 
 1. `POST /api/auth/register` returns a JWT, and a wallet is created for you
 2. Send `Authorization: Bearer <token>` on the calls below
-3. `GET /api/wallets/me` returns your wallet id and balance
+3. `GET /api/wallets/me` returns your wallet and balance
 4. `POST /api/wallets/me/verify-kyc` marks KYC as verified (demo stand-in for a real KYC provider)
-5. `POST /api/loans` with `{ "walletId": "...", "amount": 5000, "termInMonths": 3, "methodType": "REDUCING" }`
+5. `POST /api/loans` with `{ "amount": 5000, "termInMonths": 3, "methodType": "REDUCING" }` (the loan goes into your own wallet)
 6. `GET /api/loans` or `GET /api/loans/{id}` shows your loans and repayment schedules
 
 ## Makefile reference

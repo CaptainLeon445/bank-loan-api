@@ -12,6 +12,7 @@ using BankApp.Application.Users;
 using BankApp.Application.Loans;
 using BankApp.Application.Wallets;
 using BankApp.Infrastructure.Messaging;
+using BankApp.WebApi.OpenApi;
 
 using Scalar.AspNetCore;
 
@@ -43,7 +44,11 @@ builder.Services.AddHostedService<HighPerformanceOutboxDispatcher>();
 builder.Services.AddHostedService<WebhookProcessingEventConsumer>();
 
 builder.Services.AddControllers();
-builder.Services.AddOpenApi();
+builder.Services.AddOpenApi(options =>
+{
+    options.AddDocumentTransformer<BearerSecurityTransformer>();
+    options.AddOperationTransformer<BearerSecurityTransformer>();
+});
 
 // 4. Mount the authentcation middleware
 builder.Services.AddAuthentication(options =>
@@ -62,6 +67,23 @@ builder.Services.AddAuthentication(options =>
         ValidAudience = jwtSettings.Audience,
         IssuerSigningKey = new SymmetricSecurityKey(jwtSettings.KeyBytes)
     };
+
+    // Default 401s have an empty body; return the reason so clients (and Scalar) can see what went wrong.
+    options.Events = new JwtBearerEvents
+    {
+        OnChallenge = async context =>
+        {
+            context.HandleResponse();
+            string message = context.AuthenticateFailure switch
+            {
+                SecurityTokenExpiredException => "Token has expired. Log in again.",
+                not null => "Invalid token.",
+                null => "Missing token. Send the header: Authorization: Bearer <token>"
+            };
+            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+            await context.Response.WriteAsJsonAsync(new { Message = message });
+        }
+    };
 });
 
 var app = builder.Build();
@@ -73,6 +95,7 @@ if (app.Environment.IsDevelopment())
     app.MapScalarApiReference(opt =>
     {
         opt.Title = "BankApp API";
+        opt.WithPreferredScheme("Bearer");
     });
 }
 

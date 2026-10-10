@@ -20,14 +20,14 @@ public class LoanApplicationService
 
     public async Task<Guid> ApplyAndDisburseLoanAsync(Guid userId, ApplyLoanDto dto)
     {
-        var wallet = await _context.Wallets.FirstOrDefaultAsync(w => w.Id == dto.WalletId && w.UserId == userId)
-            ?? throw new InvalidOperationException("Target wallet not found.");
+        var wallet = await _context.Wallets.FirstOrDefaultAsync(w => w.UserId == userId)
+            ?? throw new InvalidOperationException("Wallet not found for the current user.");
         if (!wallet.IsKycVerified) throw new InvalidOperationException("Kyc verificaion is required");
         if (dto.Amount > wallet.LoanLimit) throw new InvalidOperationException("Loan amount is greater than the loan limit");
 
 
         decimal defaultRiskInterestRate = 0.14m;
-        var loan = new Loan(dto.WalletId, dto.Amount, defaultRiskInterestRate, dto.TermInMonths, dto.MethodType);
+        var loan = new Loan(wallet.Id, dto.Amount, defaultRiskInterestRate, dto.TermInMonths, dto.MethodType);
         var strategy = LoanStrategyFactory.GetStrategy(dto.MethodType);
         loan.GenerateSchedule(strategy);
         loan.Disburse();
@@ -39,10 +39,10 @@ public class LoanApplicationService
 
             wallet.Credit(dto.Amount);
 
-            var ledgerDisbursalCredit = new LedgerEntry(dto.WalletId, dto.Amount, "LoanDispatch", loan.Id.ToString());
+            var ledgerDisbursalCredit = new LedgerEntry(wallet.Id, dto.Amount, "LoanDispatch", loan.Id.ToString());
             _context.LedgerEntries.Add(ledgerDisbursalCredit);
 
-            var outboxItem = new OutboxMessage("loan-events", $"Loan disbursed successfully to wallet: {dto.WalletId} for the volume value: {dto.Amount}");
+            var outboxItem = new OutboxMessage("loan-events", $"Loan disbursed successfully to wallet: {wallet.Id} for the volume value: {dto.Amount}");
             _context.OutboxMessages.Add(outboxItem);
 
             await _context.SaveChangesAsync();

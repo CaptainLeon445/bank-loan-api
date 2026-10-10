@@ -9,7 +9,6 @@ public record AuthResponseDto(
 );
 
 public record ApplyLoanDto(
-    [Required] Guid WalletId,
     [Range(typeof(decimal), "0.01", "79228162514264337593543950335")] decimal Amount,
     [Range(1, 360)] int TermInMonths,
     [Required] string MethodType
