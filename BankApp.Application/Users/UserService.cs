@@ -13,7 +13,7 @@ namespace BankApp.Application.Users;
 
 public class UserService : IUserService
 {
-    // Starting loan limit for every new wallet; it is only usable once KYC is verified.
+  
     private const decimal DefaultWalletLoanLimit = 100_000m;
 
     private readonly IBankDbContext _context;
@@ -37,7 +37,7 @@ public class UserService : IUserService
         var user = new User(dto.FirstName, dto.LastName, dto.Email, passwordHash);
         _context.Users.Add(user);
 
-        // Every account gets a wallet; both rows are saved in the same SaveChanges call, so they succeed or fail together.
+
         var wallet = new Wallet(user.Id, DefaultWalletLoanLimit);
         _context.Wallets.Add(wallet);
         await _context.SaveChangesAsync();

@@ -20,7 +20,6 @@ public class LoanApplicationService
 
     public async Task<Guid> ApplyAndDisburseLoanAsync(Guid userId, ApplyLoanDto dto)
     {
-        // Filtering on UserId stops a caller from drawing a loan into someone else's wallet.
         var wallet = await _context.Wallets.FirstOrDefaultAsync(w => w.Id == dto.WalletId && w.UserId == userId)
             ?? throw new InvalidOperationException("Target wallet not found.");
         if (!wallet.IsKycVerified) throw new InvalidOperationException("Kyc verificaion is required");
@@ -38,7 +37,6 @@ public class LoanApplicationService
         {
             _context.Loans.Add(loan);
 
-            // Disbursal credits the wallet; the ledger entry records why the balance moved.
             wallet.Credit(dto.Amount);
 
             var ledgerDisbursalCredit = new LedgerEntry(dto.WalletId, dto.Amount, "LoanDispatch", loan.Id.ToString());
