@@ -6,7 +6,7 @@ A .NET 9 Web API for a simple digital-lending flow: users sign up, get a wallet,
 
 - **Auth**: register, login (JWT), forgot/reset password
 - **Wallets**: every new account gets a wallet automatically (balance, loan limit, KYC status)
-- **Loans**: apply for a loan, which is disbursed into the wallet in one transaction (loan + balance credit + ledger entry + outbox message). Supports `SIMPLE` and `REDUCING` (EMI) amortization schedules.
+- **Loans**: apply for a loan, which is disbursed into the wallet in one transaction (loan + balance credit + ledger entry + outbox message). Supports `Simple` and `Reducing` (EMI) amortization schedules.
 - **Messaging**: a background dispatcher publishes outbox rows to Kafka; a consumer reads `loan-events` and `thirdparty-webhooks-received`
 
 ## Project structure
@@ -50,7 +50,7 @@ Non-secret settings live in `BankApp.WebApi/appsettings*.json`. Secrets are neve
 2. Send `Authorization: Bearer <token>` on the calls below
 3. `GET /api/wallets/me` returns your wallet and balance
 4. `POST /api/wallets/me/verify-kyc` marks KYC as verified (demo stand-in for a real KYC provider)
-5. `POST /api/loans` with `{ "amount": 5000, "termInMonths": 3, "methodType": "REDUCING" }` (the loan goes into your own wallet)
+5. `POST /api/loans` with `{ "amount": 5000, "termInMonths": 3, "methodType": "Reducing" }` (the loan goes into your own wallet)
 6. `GET /api/loans` or `GET /api/loans/{id}` shows your loans and repayment schedules
 
 ## Makefile reference

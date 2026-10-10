@@ -42,8 +42,9 @@ public class BankDbContext : DbContext, IBankDbContext
            entity.Property(e=>e.PrincipalAmount).HasPrecision(18, 2);
            entity.Property(e=>e.RemainingBalance).HasPrecision(18, 2);
            entity.Property(e=>e.InterestRate).HasPrecision(9, 6);
-           entity.Property(e=>e.RepaymentStrategyType).HasMaxLength(50).IsRequired();
-           entity.Property(e=>e.Status).HasMaxLength(50).IsRequired();
+           // Stored as enum names ("Simple", "Active", ...) so the column stays readable.
+           entity.Property(e=>e.RepaymentStrategyType).HasConversion<string>().HasMaxLength(50).IsRequired();
+           entity.Property(e=>e.Status).HasConversion<string>().HasMaxLength(50).IsRequired();
            entity.HasMany(e=>e.AmortizationSchedule).WithOne().HasForeignKey(i=>i.LoanId);
         });
 

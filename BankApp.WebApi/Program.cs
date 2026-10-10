@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
@@ -43,7 +44,12 @@ builder.Services.AddSingleton<IKafkaClientConnectionFactory, KafkaClientConnecti
 builder.Services.AddHostedService<HighPerformanceOutboxDispatcher>();
 builder.Services.AddHostedService<WebhookProcessingEventConsumer>();
 
-builder.Services.AddControllers();
+// Enums are sent and received as names ("Simple", "Reducing"); reading ignores case, so "SIMPLE" still works.
+// Numbers are rejected so a client can't send 1 and silently get "Reducing".
+builder.Services.AddControllers()
+    .AddJsonOptions(options => options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter(allowIntegerValues: false)));
+// The OpenAPI generator reads these options (not the MVC ones above), so enums show as names in Scalar.
+builder.Services.ConfigureHttpJsonOptions(options => options.SerializerOptions.Converters.Add(new JsonStringEnumConverter(allowIntegerValues: false)));
 builder.Services.AddOpenApi(options =>
 {
     options.AddDocumentTransformer<BearerSecurityTransformer>();

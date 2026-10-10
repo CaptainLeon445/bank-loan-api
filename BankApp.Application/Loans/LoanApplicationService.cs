@@ -27,8 +27,10 @@ public class LoanApplicationService
 
 
         decimal defaultRiskInterestRate = 0.14m;
-        var loan = new Loan(wallet.Id, dto.Amount, defaultRiskInterestRate, dto.TermInMonths, dto.MethodType);
-        var strategy = LoanStrategyFactory.GetStrategy(dto.MethodType);
+        // [Required] on the DTO guarantees a value once model validation has run.
+        var strategyType = dto.MethodType ?? throw new ArgumentException("MethodType is required.");
+        var loan = new Loan(wallet.Id, dto.Amount, defaultRiskInterestRate, dto.TermInMonths, strategyType);
+        var strategy = LoanStrategyFactory.GetStrategy(strategyType);
         loan.GenerateSchedule(strategy);
         loan.Disburse();
 
