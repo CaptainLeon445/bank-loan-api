@@ -1,7 +1,7 @@
 using System;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using System.Text;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
 using BankApp.Application.Common;
@@ -12,10 +12,14 @@ namespace BankApp.Infrastructure.Identity;
 
 public class JwtTokenGenerator : IJwtTokenGenerator
 {
+    private readonly JwtSettings _settings;
+
+    public JwtTokenGenerator(IOptions<JwtSettings> settings) => _settings = settings.Value;
+
     public string GenerateToken(User user)
     {
         var tokenHandler = new JwtSecurityTokenHandler();
-        var key = Encoding.UTF8.GetBytes("SuperSecretSecureFintechKeySigningKeyExampleMustBeLong");
+        var key = _settings.KeyBytes;
 
         var tokenDescriptor = new SecurityTokenDescriptor
         {
@@ -25,9 +29,9 @@ public class JwtTokenGenerator : IJwtTokenGenerator
                 new Claim(ClaimTypes.Email, user.Email),
                 new Claim("FirstName", user.FirstName)
             }),
-            Expires = DateTime.UtcNow.AddHours(2),
-            Issuer = "YourBankAuthIssuer",
-            Audience = "YourBankAudience",
+            Expires = DateTime.UtcNow.AddMinutes(_settings.ExpiryMinutes),
+            Issuer = _settings.Issuer,
+            Audience = _settings.Audience,
             SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
         };
 

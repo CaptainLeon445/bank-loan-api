@@ -1,4 +1,3 @@
-using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
@@ -10,6 +9,9 @@ using BankApp.Application.Common;
 using BankApp.Infrastructure.Identity;
 using BankApp.Infrastructure.Data;
 using BankApp.Application.Users;
+using BankApp.Application.Loans;
+using BankApp.Application.Wallets;
+using BankApp.Infrastructure.Messaging;
 
 using Scalar.AspNetCore;
 
@@ -17,20 +19,33 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 
-// 1. Data layer config...(uses in-memory database for demonstration purposes)
-builder.Services.AddDbContext<BankDbContext>(options => options.UseInMemoryDatabase("BankDb"));
+// 1. Data layer config...(PostgreSQL via ConnectionStrings:DefaultConnection)
+builder.Services.AddDbContext<BankDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+
 builder.Services.AddScoped<IBankDbContext>(sp => sp.GetRequiredService<BankDbContext>());
 
-// 2. Security Infrastructure Mapping Configguration
+// 2. Security Infrastructure Mapping Configguration (Jwt section; the key comes from user-secrets or Jwt__Key)
+var jwtSection = builder.Configuration.GetSection(JwtSettings.SectionName);
+var jwtSettings = jwtSection.Get<JwtSettings>() ?? new JwtSettings();
+jwtSettings.EnsureValid();
+builder.Services.Configure<JwtSettings>(jwtSection);
 builder.Services.AddSingleton<IPasswordHasher, PasswordHasher>();
 builder.Services.AddSingleton<IJwtTokenGenerator, JwtTokenGenerator>();
 
 builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<LoanApplicationService>();
+builder.Services.AddScoped<WalletService>();
+
+// 3. Kafka messaging: the dispatcher publishes OutboxMessages rows, the consumer reads loan and webhook events (Kafka:BootstrapServers)
+builder.Services.AddSingleton<IKafkaClientConnectionFactory, KafkaClientConnectionFactory>();
+builder.Services.AddHostedService<HighPerformanceOutboxDispatcher>();
+builder.Services.AddHostedService<WebhookProcessingEventConsumer>();
 
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 
-// 3 Mount the authentcation middleware
+// 4. Mount the authentcation middleware
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -43,9 +58,9 @@ builder.Services.AddAuthentication(options =>
         ValidateAudience = true,
         ValidateLifetime = true,
         ValidateIssuerSigningKey = true,
-        ValidIssuer = "YourBankAuthIssuer",
-        ValidAudience = "YourBankAudience",
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("SuperSecretSecureFintechKeySigningKeyExampleMustBeLong"))
+        ValidIssuer = jwtSettings.Issuer,
+        ValidAudience = jwtSettings.Audience,
+        IssuerSigningKey = new SymmetricSecurityKey(jwtSettings.KeyBytes)
     };
 });
 
